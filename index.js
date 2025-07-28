@@ -6,7 +6,25 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./configs/swagger");
 
 const app = express();
-app.use(cors());
+const allowedOrigins = [
+  "https://giasuai-be.onrender.com/",
+  "http://127.0.0.1:5500", // test local FE
+  "http://localhost:4000", // test local BE
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(express.json());
 
 // Kết nối MongoDB
