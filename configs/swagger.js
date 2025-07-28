@@ -10,7 +10,12 @@ const options = {
     },
     servers: [
       {
+        url: "https://giasuai-be.onrender.com",
+        description: "Render Production Server",
+      },
+      {
         url: "http://localhost:4000",
+        description: "Local development",
       },
     ],
     components: {
