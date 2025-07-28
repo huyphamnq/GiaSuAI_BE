@@ -4,9 +4,9 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Firebase Auth + MongoDB API",
+      title: "GiaSuAI API",
       version: "1.0.0",
-      description: "API doc cho hệ thống xác thực dùng Firebase và MongoDB",
+      description: "",
     },
     servers: [
       {
