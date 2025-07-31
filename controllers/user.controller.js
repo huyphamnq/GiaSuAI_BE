@@ -2,11 +2,15 @@ const User = require("../models/User");
 
 const getUsers = async (req, res) => {
   try {
+    // Chỉ cho phép admin truy cập
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+
     const { email, phoneNumber, fullName } = req.query;
 
-    // Tạo object filter linh hoạt
     const filter = {};
-    if (email) filter.email = { $regex: email, $options: "i" }; // không phân biệt hoa thường
+    if (email) filter.email = { $regex: email, $options: "i" };
     if (phoneNumber)
       filter.phoneNumber = { $regex: phoneNumber, $options: "i" };
     if (fullName) filter.fullName = { $regex: fullName, $options: "i" };
