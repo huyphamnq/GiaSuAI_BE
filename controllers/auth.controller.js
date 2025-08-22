@@ -1,105 +1,128 @@
-const axios = require("axios");
-const User = require("../models/User");
-const admin = require("../configs/firebaseAdmin");
+import axios from "axios";
+import User from "../models/User.js";
+import admin from "../configs/firebaseAdmin.js";
 
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 
 // -------------------- LOGIN --------------------
 const loginWithFirebase = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    const firebaseUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`;
+    const { identifier, password } = req.body;
+    const trimmedIdentifier = identifier.trim();
+    let email = trimmedIdentifier;
+    let userDoc = null;
 
+    if (!trimmedIdentifier.includes("@")) {
+      userDoc = await User.findOne({ userName: trimmedIdentifier });
+      if (!userDoc) return res.status(404).json({ message: "Username không tồn tại" });
+      email = userDoc.email;
+    }
+
+    const firebaseUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`;
     const response = await axios.post(firebaseUrl, {
       email,
       password,
       returnSecureToken: true,
     });
 
-    const { idToken, refreshToken, localId: uid } = response.data;
+    const { idToken, localId: uid } = response.data;
 
-    return res.status(200).json({
+    if (!userDoc) {
+      userDoc = await User.findOne({ email });
+      if (!userDoc) return res.status(404).json({ message: "Email không tồn tại trong hệ thống" });
+    }
+
+    res.status(200).json({
       message: "Đăng nhập thành công",
       idToken,
-      refreshToken,
       uid,
+      user: {
+        userName: userDoc.userName,
+        fullName: userDoc.fullName,
+        email: userDoc.email,
+        phoneNumber: userDoc.phoneNumber,
+        role: userDoc.role,
+      },
     });
   } catch (err) {
-    return res.status(401).json({
-      message: "Đăng nhập thất bại",
-      error: err.response?.data || err.message,
-    });
+    console.error("Login error:", err.response?.data || err.message);
+    res.status(401).json({ message: "Đăng nhập thất bại" });
   }
 };
 
 // -------------------- SIGNUP --------------------
 const signupWithFirebase = async (req, res) => {
-  const { email, password, fullName, phoneNumber, role } = req.body;
+  const { userName, fullName, email, password, phoneNumber, role } = req.body;
+  
+  // Log dữ liệu nhận được từ client
+  console.log("🔥 Dữ liệu signup từ client:", {
+    userName,
+    fullName,
+    email,
+    password: password ? "***" : null, // ẩn password cho an toàn
+    phoneNumber,
+    role,
+  });
 
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedUserName = userName.trim();
   let firebaseUID = null;
 
   try {
-    // 1. Tạo tài khoản Firebase
+    const existingUser = await User.findOne({
+      $or: [{ email: trimmedEmail }, { userName: trimmedUserName }],
+    });
+    if (existingUser) return res.status(409).json({ message: "Email hoặc Username đã tồn tại" });
+
+    console.log("✅ Dữ liệu đã qua bước kiểm tra tồn tại");
+
     const response = await axios.post(
       `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
-      {
-        email,
-        password,
-        returnSecureToken: true,
-      }
+      { email: trimmedEmail, password, returnSecureToken: true }
     );
 
-    const { idToken, refreshToken, localId } = response.data;
+    const { idToken, localId } = response.data;
     firebaseUID = localId;
 
-    if (!firebaseUID) {
-      return res.status(500).json({ message: "Không lấy được Firebase UID" });
-    }
-
-    // 2. Role an toàn
-    const allowedRoles = ["student", "tutor"];
+    const allowedRoles = ["student", "teacher", "admin"];
     const safeRole = allowedRoles.includes(role) ? role : "student";
 
-    // 3. Lưu vào MongoDB
-    await User.create({
+    const newUser = await User.create({
       firebaseUid: firebaseUID,
-      email,
+      userName: trimmedUserName,
+      email: trimmedEmail,
       fullName,
       phoneNumber,
       role: safeRole,
     });
 
-    // 4. Trả về kết quả
-    return res.status(200).json({
+    // Log dữ liệu trước khi trả về client
+    console.log("✅ Dữ liệu user mới tạo thành công:", {
+      userName: newUser.userName,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      phoneNumber: newUser.phoneNumber,
+      role: newUser.role,
+      firebaseUid: newUser.firebaseUid,
+    });
+
+    res.status(201).json({
       message: "Đăng ký thành công",
       idToken,
-      refreshToken,
       uid: firebaseUID,
+      user: {
+        userName: newUser.userName,
+        fullName: newUser.fullName,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+      },
     });
   } catch (error) {
-    const isDuplicateKey =
-      error?.message?.includes("E11000") || error?.code === 11000;
-
-    // Nếu Firebase tạo thành công nhưng MongoDB lỗi → rollback Firebase
-    if (firebaseUID && isDuplicateKey) {
-      try {
-        await admin.auth().deleteUser(firebaseUID);
-        console.log("🔥 Đã rollback Firebase vì MongoDB lỗi");
-      } catch (deleteErr) {
-        console.error("❌ Không thể xoá Firebase user:", deleteErr.message);
-      }
-    }
-
-    return res.status(400).json({
-      message: "Đăng ký thất bại",
-      error: error.response?.data || error.message,
-    });
+    console.error("Signup error:", error.response?.data || error.message);
+    res.status(500).json({ message: "Đăng ký thất bại" });
   }
 };
 
-// -------------------- EXPORT --------------------
-module.exports = {
-  loginWithFirebase,
-  signupWithFirebase,
-};
+
+export { loginWithFirebase, signupWithFirebase };

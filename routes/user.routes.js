@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import { getUsers } from "../controllers/user.controller.js";
+import verifyFirebaseToken from "../middlewares/auth.middleware.js";
+
 const router = express.Router();
-const userController = require("../controllers/user.controller");
-const verifyFirebaseToken = require("../middlewares/auth.middleware");
 
 /**
  * @swagger
@@ -47,6 +48,6 @@ const verifyFirebaseToken = require("../middlewares/auth.middleware");
  *         description: Không có hoặc token không hợp lệ
  */
 
-router.get("/users", verifyFirebaseToken, userController.getUsers);
+router.get("/users", verifyFirebaseToken, getUsers);
 
-module.exports = router;
+export default router;

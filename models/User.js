@@ -1,32 +1,51 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
+import validator from "validator";
 
-const userSchema = new mongoose.Schema(
+const { Schema } = mongoose;
+
+const userSchema = new Schema(
   {
     firebaseUid: {
       type: String,
-      required: true,
       unique: true,
+      required: true,
+      trim: true,
     },
-    email: {
+    userName: {
       type: String,
-      required: true,
       unique: true,
+      required: true,
+      trim: true,
+      match: [/^[a-zA-Z0-9_]+$/, "Username chỉ chứa chữ, số, dấu _"],
     },
     fullName: {
       type: String,
+      trim: true,
+    },
+    email: {
+      type: String,
+      unique: true,
       required: true,
+      trim: true,
+      lowercase: true,
+      validate: [validator.isEmail, "Email không hợp lệ"],
     },
     phoneNumber: {
       type: String,
-      required: true,
+      unique: true,
+      sparse: true,
+      match: [/^[0-9]{9,12}$/, "Số điện thoại không hợp lệ"],
     },
     role: {
       type: String,
-      enum: ['student', 'tutor'],
-      default: 'student',
+      enum: ["student", "teacher", "admin"],
+      default: "student",
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('User', userSchema);
+// Optional: compound index để search nhanh
+userSchema.index({ userName: 1, email: 1 });
+
+export default mongoose.model("User", userSchema);

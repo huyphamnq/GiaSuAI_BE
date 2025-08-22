@@ -1,9 +1,13 @@
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./configs/swagger");
+import "dotenv/config";
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./configs/swagger.js";
+
+import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import courseRoutes from "./routes/course.routes.js"
 
 const app = express();
 const allowedOrigins = [
@@ -37,16 +41,14 @@ mongoose
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
-const authRoutes = require("./routes/auth.routes");
-const userRoutes = require("./routes/user.routes");
-
 app.use("/", authRoutes);
 app.use("/", userRoutes);
+app.use("/", courseRoutes);
 
 // Test
 app.get("/", (req, res) => res.send("Backend is running 🔥"));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
+  console.log(`🚀 Server running on http://localhost:${PORT}/api-docs`)
 );
