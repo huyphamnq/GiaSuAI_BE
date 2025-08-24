@@ -14,7 +14,8 @@ const loginWithFirebase = async (req, res) => {
 
     if (!trimmedIdentifier.includes("@")) {
       userDoc = await User.findOne({ userName: trimmedIdentifier });
-      if (!userDoc) return res.status(404).json({ message: "Username không tồn tại" });
+      if (!userDoc)
+        return res.status(404).json({ message: "Username không tồn tại" });
       email = userDoc.email;
     }
 
@@ -29,7 +30,10 @@ const loginWithFirebase = async (req, res) => {
 
     if (!userDoc) {
       userDoc = await User.findOne({ email });
-      if (!userDoc) return res.status(404).json({ message: "Email không tồn tại trong hệ thống" });
+      if (!userDoc)
+        return res
+          .status(404)
+          .json({ message: "Email không tồn tại trong hệ thống" });
     }
 
     res.status(200).json({
@@ -53,7 +57,7 @@ const loginWithFirebase = async (req, res) => {
 // -------------------- SIGNUP --------------------
 const signupWithFirebase = async (req, res) => {
   const { userName, fullName, email, password, phoneNumber, role } = req.body;
-  
+
   // Log dữ liệu nhận được từ client
   console.log("🔥 Dữ liệu signup từ client:", {
     userName,
@@ -72,7 +76,10 @@ const signupWithFirebase = async (req, res) => {
     const existingUser = await User.findOne({
       $or: [{ email: trimmedEmail }, { userName: trimmedUserName }],
     });
-    if (existingUser) return res.status(409).json({ message: "Email hoặc Username đã tồn tại" });
+    if (existingUser)
+      return res
+        .status(409)
+        .json({ message: "Email hoặc Username đã tồn tại" });
 
     console.log("✅ Dữ liệu đã qua bước kiểm tra tồn tại");
 
@@ -124,5 +131,29 @@ const signupWithFirebase = async (req, res) => {
   }
 };
 
+// -------------------- FORGOT PASSWORD --------------------
+const forgotPasswordWithFirebase = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Vui lòng nhập email" });
+    }
 
-export { loginWithFirebase, signupWithFirebase };
+    const firebaseUrl = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_API_KEY}`;
+    const response = await axios.post(firebaseUrl, {
+      requestType: "PASSWORD_RESET",
+      email,
+    });
+
+    console.log("📩 Firebase gửi mail reset password:", response.data);
+
+    res.status(200).json({
+      message: "Email reset mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư.",
+    });
+  } catch (err) {
+    console.error("Forgot password error:", err.response?.data || err.message);
+    res.status(500).json({ message: "Gửi email reset mật khẩu thất bại" });
+  }
+};
+
+export { loginWithFirebase, signupWithFirebase, forgotPasswordWithFirebase };

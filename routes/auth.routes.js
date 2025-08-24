@@ -1,5 +1,5 @@
 import express from "express";
-import { loginWithFirebase, signupWithFirebase } from "../controllers/auth.controller.js";
+import { loginWithFirebase, signupWithFirebase, forgotPasswordWithFirebase } from "../controllers/auth.controller.js";
 
 const router = express.Router();
 
@@ -108,5 +108,41 @@ router.post("/login", loginWithFirebase);
  *         description: Lỗi server
  */
 router.post("/signup", signupWithFirebase);
+
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     summary: Gửi email reset mật khẩu (Firebase)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@example.com
+ *     responses:
+ *       200:
+ *         description: Email reset mật khẩu đã được gửi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Email reset mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư."
+ *       400:
+ *         description: Thiếu email
+ *       500:
+ *         description: Lỗi server
+ */
+router.post("/forgot-password", forgotPasswordWithFirebase);
 
 export default router;
